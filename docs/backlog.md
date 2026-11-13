@@ -7,36 +7,29 @@
 - Eindhoven feature extracted into `packages/module-eindhoven`; its Surface is
   under Explore → Modules and its map is also available through Samples.
 - Current map: official district/neighbourhood boundaries, OSM raster basemap,
-  live permits with date/category/status filtering and a visible 5,000-row cap.
+  checked-in OSM building/green-space detail, live permits with
+  date/category/status filtering and a visible 5,000-row cap.
 
-## Paused: OSM buildings and green spaces
+## Completed: OSM buildings and green spaces
 
 Tracked in [GitHub issue #1](https://github.com/jgreeve/module-HackEindhoven/issues/1).
 
-Goal: combine real selectable OSM features with the official Eindhoven boundaries.
-No OSM building/green-space assets have been downloaded successfully or integrated.
+- `src/data/buildings.geojson`: 3,103 polygons, 0.90 MiB, captured 2026-11-13.
+- `src/data/green.geojson`: 487 polygons, 0.14 MiB, captured 2026-11-13,
+  including 9 multipolygon relations.
+- Coverage: city-centre bbox `51.435,5.468,51.447,5.490`, explicitly labelled in
+  the map because official boundaries and permits cover the whole city.
+- The data is embedded into the module sample at build time. The Viewer never
+  calls Overpass; no external request is made for OSM detail.
+- Independent layer toggles and scoped popups are present. ODbL source,
+  timestamps and feature ids are retained in the GeoJSON metadata/properties.
+- `scripts/fetch-osm.mjs` is the maintained, bounded refresh tool. It is not part
+  of install/dev/build/CI. The former WIP script was replaced after the
+  green-space relation conversion succeeded.
 
-The unvalidated downloader experiment is preserved at
-`packages/module-eindhoven/scripts/fetch-osm.wip.mjs`. It is not called by any
-npm lifecycle, build or test. Its output paths and polygon conversion need review
-before use. It is an experiment, not a supported data-refresh command.
-
-Findings from the paused attempt:
-- City-wide OSM query reported about 153,694 building objects: avoid loading that
-  entire footprint set into the viewer by default.
-- A proposed centre-only bbox is south/west/north/east
-  `51.435, 5.468, 51.447, 5.490`, with about 3,113 building objects and 487 green
-  objects at query time. This is not full-city coverage and requires agreement
-  and clear labelling before shipping.
-- Overpass returned capacity/time-out errors. Do not issue bulk requests on
-  app startup or repeatedly retry while doing unrelated repository setup.
-
-Acceptance criteria for resuming:
-1. Agree coverage and size limits; retain OSM source ids, data timestamp and ODbL attribution.
-2. Produce validated, compact GeoJSON with correct multipolygon holes; verify
-   processing through a vetted converter or geometry fixtures.
-3. Add separate buildings/green layer toggles, scoped popups and clear coverage.
-4. Coordinate permit behavior as a separate task below.
+The original city-wide estimate was about 153,694 building objects, so full-city
+footprints were intentionally not loaded. Extending coverage is a future task
+that must consider bundle/file size and run through the same review.
 
 ## Separate task: on-demand permit requests
 

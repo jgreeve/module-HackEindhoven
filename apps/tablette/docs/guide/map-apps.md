@@ -113,16 +113,22 @@ official datasets from [data.eindhoven.nl](https://data.eindhoven.nl/):
 | Buurtgrens | 116 neighbourhood polygons |
 | Aangevraagde vergunningen | Permit applications with coordinates, category, status and dates |
 
-The boundaries are loaded once from the GeoJSON export. Permit applications are
-fetched live from the API for the selected date range, defaulting to the last 90
-days and capped at the latest 5,000 rows. The API allows browser access, so the
-sample works inside the sandboxed Viewer.
+The boundaries are loaded once from the GeoJSON export. The map also embeds a
+checked-in OSM extract: 3,103 building polygons and 487 green-space polygons for
+a **city-centre bounding box**, not the whole municipality. The extract is
+injected into the sample at module build time; the Viewer never queries Overpass.
+Its source, capture timestamp, bbox and ODbL attribution are kept in the GeoJSON
+metadata.
+
+Permit applications are fetched live from the API for the selected date range,
+defaulting to the last 90 days and capped at the latest 5,000 rows. The API allows
+browser access, so the sample works inside the sandboxed Viewer.
 
 The sample is declared in the Eindhoven module's `samples` descriptor. The host's
 `src/map/samples.ts` adapter discovers samples from enabled modules; `listApps()`
-and `readApp()` in `src/map/repo.ts` consult them before the forge catalogue. All three
-datasets are public domain; the app keeps the Gemeente Eindhoven and OSM
-attribution visible.
+and `readApp()` in `src/map/repo.ts` consult them before the forge catalogue. All
+municipal datasets are public domain; OSM feature data and the basemap are ODbL.
+The app keeps both attributions visible and labels the smaller OSM coverage.
 
 ## Attribution
 

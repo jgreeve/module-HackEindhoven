@@ -18,7 +18,7 @@
 - Run npm run check. Run npm run test:smoke for host/Surface integration changes.
 - The root lockfile is authoritative. Use npm install after dependency changes.
 - No API key is needed in tests. Mock public APIs; never print or commit localStorage keys/tokens.
-- No autonomous downloading of bulk OSM data. The downloader under module-eindhoven/scripts is paused WIP, not part of setup/build/tests.
+- OSM detail is a checked-in bounded extract. Regenerate only when the task requires it, via the package's `fetch:osm:*` scripts; it is not part of install/dev/build/CI. Document coverage, size, source and ODbL attribution.
 
 ## Finish / handoff
 - Report changed files, tests actually run and known limitations.

@@ -39,9 +39,12 @@ configuration lives in browser localStorage. Module Surfaces are trusted React
 components, so new modules require code review. Generated HTML maps run in
 sandboxed iframes with scripts/popups and no same-origin access.
 
-The Eindhoven map currently requests official boundaries and permits from the
-CORS-enabled municipal API. Its OSM tiles are a basemap, not selectable building
-or green-space datasets. Those features remain a separate paused task.
+The Eindhoven map requests official boundaries and permits from the CORS-enabled
+municipal API. Its OSM buildings and green spaces are a checked-in, bounded
+city-centre GeoJSON extract (ODbL), embedded into the sample at module build time;
+the Viewer makes no Overpass request. The OSM detail covers a smaller area than
+the official boundary/permit layers and is labelled accordingly. Permit loading
+remains a separate API path and is tracked for explicit on-demand behavior.
 
 ## Collaboration boundary
 

@@ -46,6 +46,8 @@ test("a local module opens under Explore and hands its map to Sketch", async ({ 
   await expect(card.getByText("eindhoven_open_map", { exact: true })).toBeVisible();
   await card.getByRole("button", { name: "Open", exact: true }).click();
   const moduleFrame = page.frameLocator('iframe[title="Eindhoven module map"]');
+  await expect(moduleFrame.locator("#osm-summary")).toContainText("3,103 buildings");
+  await expect(moduleFrame.locator("#osm-summary")).toContainText("487 green spaces");
   await expect(moduleFrame.locator("#status")).toContainText("Loaded 1 permit application");
   await page.getByRole("button", { name: "Open in Sketch", exact: true }).click();
   await expect(page.locator(".map-status-path")).toHaveText("maps/eindhoven.html");

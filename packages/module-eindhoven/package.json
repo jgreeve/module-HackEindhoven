@@ -11,7 +11,10 @@
     "build": "vite build && tsc -p tsconfig.build.json",
     "watch": "vite build --watch",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test test/eindhoven.test.ts"
+    "test": "tsx --test test/eindhoven.test.ts",
+    "fetch:osm": "node scripts/fetch-osm.mjs",
+    "fetch:osm:buildings": "node scripts/fetch-osm.mjs --buildings",
+    "fetch:osm:green": "node scripts/fetch-osm.mjs --green"
   },
   "peerDependencies": {
     "@hackeindhoven/module-contracts": "0.1.0",

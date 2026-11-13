@@ -15,6 +15,26 @@ test("descriptor is SDK-compatible and contains a runnable single-file map", () 
   assert.ok(inlineScripts.length > 0);
   for (const match of inlineScripts) new Script(match[1]);
 });
+
+test("the map embeds validated OSM building and green-space data", () => {
+  const embedded = /<script id="osm-data" type="application\/json">([\s\S]*?)<\/script>/.exec(
+    eindhovenSample.html,
+  );
+  assert.ok(embedded, "missing embedded OSM data");
+  assert.ok(!eindhovenSample.html.includes("__OSM_DATA__"));
+  const data = JSON.parse(embedded[1]);
+  assert.equal(data.buildings.type, "FeatureCollection");
+  assert.equal(data.green.type, "FeatureCollection");
+  assert.ok(data.buildings.features.length > 3000);
+  assert.ok(data.green.features.length > 400);
+  assert.equal(data.buildings.license, "ODbL 1.0");
+  assert.equal(data.green.license, "ODbL 1.0");
+  for (const feature of [...data.buildings.features, ...data.green.features]) {
+    assert.ok(feature.properties.osm_id);
+    assert.ok(["Polygon", "MultiPolygon"].includes(feature.geometry.type));
+  }
+  assert.match(eindhovenSample.html, /OSM buildings/);
+});
 test("opening a map uses injected host capabilities in the correct order", async () => {
   const calls: string[] = [];
   const ctx = context();

@@ -89,6 +89,40 @@
         border-color: var(--danger);
         color: var(--danger);
       }
+      .osm-summary {
+        margin: 0 0 10px;
+        border: 1px solid #bbf7d0;
+        border-radius: 7px;
+        background: #f0fdf4;
+        color: #166534;
+        padding: 7px 9px;
+        font-size: 0.72rem;
+        line-height: 1.45;
+      }
+      .osm-summary.warn {
+        border-color: #fed7aa;
+        background: #fff7ed;
+        color: #9a3412;
+      }
+      .osm-key {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px 12px;
+        margin: 0 0 10px;
+        color: #475569;
+        font-size: 0.69rem;
+      }
+      .osm-key span {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .osm-key i {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+      }
       form {
         display: grid;
         gap: 9px;
@@ -255,12 +289,18 @@
       <div class="head">
         <div>
           <h1>Eindhoven open data</h1>
-          <p class="sub">Districts, neighbourhoods and live permit applications from Gemeente Eindhoven.</p>
+          <p class="sub">Districts, neighbourhoods, OSM buildings and green spaces, with live permit applications.</p>
         </div>
         <span class="live">LIVE</span>
       </div>
 
       <div id="status" class="status">Loading map layers…</div>
+      <div id="osm-summary" class="osm-summary">Loading OSM detail…</div>
+      <div class="osm-key" aria-label="OSM layer key">
+        <span><i style="background:#cbd5e1;border:1px solid #64748b"></i>OSM buildings</span>
+        <span><i style="background:#86efac;border:1px solid #15803d"></i>OSM green spaces</span>
+        <span><i style="border:1px dashed #64748b"></i>OSM extract coverage</span>
+      </div>
 
       <form id="filters">
         <div class="dates">
@@ -298,10 +338,13 @@
         Source: <a href="https://data.eindhoven.nl/explore/dataset/wijken/" target="_blank" rel="noreferrer">Wijkgrens</a>,
         <a href="https://data.eindhoven.nl/explore/dataset/buurten/" target="_blank" rel="noreferrer">Buurtgrens</a>,
         <a href="https://data.eindhoven.nl/explore/dataset/aangevraagde-vergunningen/" target="_blank" rel="noreferrer">Aangevraagde vergunningen</a>
-        — Gemeente Eindhoven, public domain. Map: © OpenStreetMap contributors (ODbL).
+        — Gemeente Eindhoven, public domain. Basemap and OSM detail:
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a> (ODbL).
+        OSM detail is a city-centre extract; official boundaries and permits cover the whole city.
       </div>
     </aside>
 
+    <script id="osm-data" type="application/json">__OSM_DATA__</script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
       (function () {
@@ -311,6 +354,12 @@
         var PERMIT_DATASET = "aangevraagde-vergunningen";
         var MAX_PERMITS = 5000;
         var DEFAULT_DAYS = 90;
+        var OSM_DATA = {};
+        try {
+          OSM_DATA = JSON.parse(document.getElementById("osm-data").textContent || "{}");
+        } catch (error) {
+          console.warn("[eindhoven] OSM data unavailable", error);
+        }
         var SELECT = [
           "zaaknummer",
           "omschrijving",
@@ -362,6 +411,7 @@
           apply: document.getElementById("apply"),
           reset: document.getElementById("reset"),
           status: document.getElementById("status"),
+          osmSummary: document.getElementById("osm-summary"),
           meta: document.getElementById("meta"),
           legend: document.getElementById("legend"),
         };
@@ -380,7 +430,86 @@
             '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors (ODbL)',
         }).addTo(map);
 
+        map.createPane("coveragePane").style.zIndex = "305";
+        map.createPane("greenPane").style.zIndex = "310";
+        map.createPane("buildingPane").style.zIndex = "320";
+        map.createPane("wijkPane").style.zIndex = "380";
+        map.createPane("buurtPane").style.zIndex = "390";
+        map.createPane("permitPane").style.zIndex = "410";
+
+        var greenRenderer = L.canvas({ pane: "greenPane", padding: 0.4 });
+        var buildingRenderer = L.canvas({ pane: "buildingPane", padding: 0.4 });
+
+        var coverageLayer = L.rectangle(
+          [
+            [51.435, 5.468],
+            [51.447, 5.49],
+          ],
+          {
+            pane: "coveragePane",
+            color: "#64748b",
+            weight: 1,
+            opacity: 0.7,
+            dashArray: "6 4",
+            fill: false,
+            interactive: false,
+          },
+        ).addTo(map);
+
+        var greenLayer = L.geoJSON(null, {
+          pane: "greenPane",
+          renderer: greenRenderer,
+          style: function () {
+            return {
+              color: "#15803d",
+              weight: 0.5,
+              opacity: 0.7,
+              fillColor: "#86efac",
+              fillOpacity: 0.38,
+            };
+          },
+          onEachFeature: function (feature, layer) {
+            var p = feature.properties || {};
+            layer.bindPopup(function () {
+              return osmPopup(p, "OSM green space");
+            });
+            layer.on("mouseover", function () {
+              layer.setStyle({ weight: 1.5, fillOpacity: 0.68 });
+            });
+            layer.on("mouseout", function () {
+              greenLayer.resetStyle(layer);
+            });
+          },
+        }).addTo(map);
+
+        var buildingsLayer = L.geoJSON(null, {
+          pane: "buildingPane",
+          renderer: buildingRenderer,
+          style: function () {
+            return {
+              color: "#64748b",
+              weight: 0.4,
+              opacity: 0.55,
+              fillColor: "#cbd5e1",
+              fillOpacity: 0.5,
+            };
+          },
+          onEachFeature: function (feature, layer) {
+            var p = feature.properties || {};
+            layer.bindPopup(function () {
+              return osmPopup(p, "OSM building");
+            });
+            layer.on("mouseover", function () {
+              layer.setStyle({ weight: 1.4, fillOpacity: 0.78 });
+            });
+            layer.on("mouseout", function () {
+              buildingsLayer.resetStyle(layer);
+            });
+          },
+        }).addTo(map);
+
         var wijkLayer = L.geoJSON(null, {
+          pane: "wijkPane",
           style: function () {
             return {
               color: "#0f766e",
@@ -413,6 +542,7 @@
         }).addTo(map);
 
         var buurtLayer = L.geoJSON(null, {
+          pane: "buurtPane",
           style: function () {
             return {
               color: "#2563eb",
@@ -446,7 +576,7 @@
           },
         }).addTo(map);
 
-        var permitRenderer = L.canvas({ padding: 0.4 });
+        var permitRenderer = L.canvas({ pane: "permitPane", padding: 0.4 });
         var permitLayer = L.layerGroup().addTo(map);
         var permitAbort = null;
 
@@ -454,6 +584,9 @@
           .layers(
             null,
             {
+              "OSM green spaces": greenLayer,
+              "OSM buildings": buildingsLayer,
+              "OSM detail coverage": coverageLayer,
               "Districts (wijken)": wijkLayer,
               "Neighbourhoods (buurten)": buurtLayer,
               "Permit applications": permitLayer,
@@ -475,6 +608,72 @@
               }[ch];
             },
           );
+        }
+
+        function osmPopup(props, fallback) {
+          var label =
+            props.name ||
+            props.building ||
+            props.leisure ||
+            props.landuse ||
+            props.natural ||
+            fallback;
+          var type =
+            props.building ||
+            props.leisure ||
+            props.landuse ||
+            props.natural ||
+            "feature";
+          var href =
+            "https://www.openstreetmap.org/" +
+            encodeURIComponent(props.osm_type) +
+            "/" +
+            encodeURIComponent(props.osm_id);
+          return (
+            '<div class="popup"><h3 class="popup-title">' +
+            escapeHtml(label) +
+            '</h3><dl class="popup-grid"><dt>OSM</dt><dd><a href="' +
+            href +
+            '" target="_blank" rel="noreferrer">' +
+            escapeHtml(props.osm_type + "/" + props.osm_id) +
+            "</a></dd><dt>Type</dt><dd>" +
+            escapeHtml(type) +
+            "</dd></dl></div>"
+          );
+        }
+
+        function loadOsmLayers() {
+          var buildingsData = OSM_DATA.buildings;
+          var greenData = OSM_DATA.green;
+          var buildingCount = 0;
+          var greenCount = 0;
+          if (buildingsData && buildingsData.features) {
+            buildingsLayer.addData(buildingsData);
+            buildingCount = buildingsData.features.length;
+          }
+          if (greenData && greenData.features) {
+            greenLayer.addData(greenData);
+            greenCount = greenData.features.length;
+          }
+          if (!buildingCount && !greenCount) {
+            els.osmSummary.className = "osm-summary warn";
+            els.osmSummary.textContent = "OSM detail is unavailable in this build.";
+            return false;
+          }
+          var captured = buildingsData && buildingsData.generated ? new Date(buildingsData.generated) : null;
+          var capturedText =
+            captured && !Number.isNaN(captured.getTime())
+              ? " Captured " + formatDateTime(captured) + "."
+              : "";
+          els.osmSummary.className = "osm-summary";
+          els.osmSummary.textContent =
+            "OSM detail: " +
+            buildingCount.toLocaleString("en-GB") +
+            " buildings · " +
+            greenCount.toLocaleString("en-GB") +
+            " green spaces. City-centre extract." +
+            capturedText;
+          return true;
         }
 
         function isoDate(date) {
@@ -831,6 +1030,7 @@
         });
 
         resetDates();
+        loadOsmLayers();
         loadBoundaries();
         loadFacets();
         loadPermits();
